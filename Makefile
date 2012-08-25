@@ -1,5 +1,5 @@
 solver:
-	cc -g -Wall nfa.c engine.c -o engine
+	cc -g -Wall nfa.c list.c engine.c -o engine
 
 all: engine
 

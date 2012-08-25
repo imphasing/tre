@@ -5,6 +5,13 @@ enum state_behavior {
 	state_match
 };
 
+enum special_chars {
+	kleene_star
+};
+
+
+// for single character matches, matching_value will have a character
+// for a split state, or match state, matching_value will be uninitialized
 struct state {
 	enum state_behavior type;
 	char matching_value;
