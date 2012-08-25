@@ -18,7 +18,7 @@ bool nfa_matches(char *string, struct state *nfa)
 		while (next != NULL) {
 			struct state *current = next->data;
 			if (current->type == state_single) {
-				if (current->matching_value == *string || current->matching_value == kleene_star) {
+				if (current->matching_value == *string || current->matching_value == any_char) {
 					if (current->output->type == state_match)
 						return true;
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 
 	// .* fragment, to match inside strings, should be implicitly added to a regex unless ^blah is specified
 	struct state *star_split = create_split_state();
-	struct state *star = create_single_state(kleene_star);
+	struct state *star = create_single_state(any_char);
 	connect_split_state(star_split, star, first_alternation);
 	connect_single_state(star, star_split);
 

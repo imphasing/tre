@@ -6,7 +6,7 @@ enum state_behavior {
 };
 
 enum special_chars {
-	kleene_star
+	any_char
 };
 
 
