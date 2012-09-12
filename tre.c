@@ -1,8 +1,30 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include "nfa.h"
+#include <string.h>
+
+#include "tre.h"
 #include "list.h"
+
+int current_index = 0;
+char *regex;
+
+int main(int argc, char **argv)
+{
+	regex = argv[1];
+	char *match = argv[2];	
+	struct state *parsed = parse_regex();
+
+	struct state *star_split = create_split_state();
+	struct state *star = create_single_state(any_char);
+	connect_split_state(star_split, star, parsed);
+	connect_single_state(star, star_split);
+
+	bool matches = nfa_matches(match, star_split);
+	printf("Result (%s on %s): %d\n", regex, match, matches);
+
+	return 0;
+}
 
 // wow this actually works
 // doesn't match if there's characters in front of the string to test though, so it's like an implicit ^..
@@ -19,13 +41,13 @@ bool nfa_matches(char *string, struct state *nfa)
 			struct state *current = next->data;
 			if (current->type == state_single) {
 				if (current->matching_value == *string || current->matching_value == any_char) {
-					if (current->output->type == state_match)
+					if (current->output == NULL)
 						return true;
 
 					prepend_node(next_possible, current->output);
 				}
 			} else if (current->type == state_split) {
-				if (current->output->type == state_match || current->output1->type == state_match)
+				if (current->output == NULL || current->output1 == NULL)
 					return true;
 
 				append_node(possible, current->output);
@@ -42,49 +64,103 @@ bool nfa_matches(char *string, struct state *nfa)
 	return false;
 }
 
-		
-int main(int argc, char **argv)
+
+char peek()
 {
-	// (b|c)e?e?man
-	struct state *match = create_match_state();
+	return regex[current_index];
+}
 
-	struct state *b = create_single_state('b');
-	struct state *c = create_single_state('c');
-	
-	struct state *e1 = create_single_state('e');
-	struct state *e2 = create_single_state('e');
+bool eat(char c)
+{
+	if (regex[current_index] == c) {
+		current_index++;
+		return true;
+	}
 
-	struct state *m = create_single_state('m');
-	struct state *a = create_single_state('a');
-	struct state *n = create_single_state('n');
+	return false;
+}
 
-	struct state *first_alternation = create_split_state();
-	struct state *first_optional = create_split_state();
-	struct state *second_optional = create_split_state();
+char next()
+{
+	char next = regex[current_index];
+	current_index++;
+	return next;
+}
 
-	connect_split_state(first_alternation, b, c);
-	connect_single_state(b, first_optional);
-	connect_single_state(c, first_optional);
+bool more()
+{
+	return current_index < strlen(regex);
+}
 
-	connect_split_state(first_optional, e1, second_optional);
-	connect_single_state(e1, second_optional);
 
-	connect_split_state(second_optional, e2, m);
-	connect_single_state(e2, m);
+struct state *parse_base()
+{
+	switch (peek()) {
+		case '(':
+			eat('(');
+			struct state *regex = parse_regex();
+			eat(')');
+			return regex;
+		default:
+			return create_single_state(next());
+	}
+}
 
-	connect_single_state(m, a);
-	connect_single_state(a, n);
-	connect_single_state(n, match);
+struct state *parse_factor()
+{
+	struct state *base = parse_base();
 
-	// .* fragment, to match inside strings, should be implicitly added to a regex unless ^blah is specified
-	struct state *star_split = create_split_state();
-	struct state *star = create_single_state(any_char);
-	connect_split_state(star_split, star, first_alternation);
-	connect_single_state(star, star_split);
+	while (more() && peek() == '*') {
+		eat('*');
+		struct state *next = create_split_state();
+		next->output = base;
+		base->output = next;
+		base = next;
+	}
 
-	bool matches = nfa_matches(argv[1], star_split);
+	return base;
+}
 
-	printf("Result (%s): %d\n", argv[1], matches);
+struct state *parse_term()
+{
+	struct state *first;
+	if (more() && peek() != ')' && peek() != '|') {
+		struct state *next = parse_factor();
+		first = next;
 
-	return 0;
+		while (more() && peek() != ')' && peek() != '|') {
+			struct state *after = parse_factor();
+			switch (next->type) {
+				case state_single:
+					next->output = after;
+					next = after;
+					break;
+				case state_split:
+					next->output1 = after;
+					next = after;
+					break;
+			}
+		}
+	}
+	else {
+		printf("Something terrible happened.\n");
+	}
+
+	return first;
+}
+
+struct state *parse_regex()
+{
+	struct state *term = parse_term();
+
+	if (more() && peek() == '|') {
+		eat('|');
+		struct state *regex = parse_regex();
+		struct state *split = create_split_state();
+		connect_split_state(split, term, regex);
+		return split;
+	}
+	else {
+		return term;
+	}
 }
