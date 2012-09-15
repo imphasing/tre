@@ -1,46 +1,29 @@
 #include <stdlib.h>
 #include "nfa.h"
 
-
-struct state *create_single_state(char matching_value)
+state *create_single_state(char matching_value)
 {
-	struct state *state = malloc(sizeof(struct state));
+	state *state = malloc(sizeof(state));
 	state->type = state_single;
 	state->matching_value = matching_value;
 
 	return state;
 }
 
-struct state *create_split_state()
+state *create_split_state()
 {
-	struct state *state = malloc(sizeof(struct state));
+	state *state = malloc(sizeof(state));
 	state->type = state_split;
 
 	return state;
 }
 
-struct state *create_match_state()
+fragment *create_fragment(state *start, int num_dangling, state ***dangling)
 {
-	struct state *state = malloc(sizeof(struct state));
-	state->type = state_match;
+	fragment *frag = malloc(sizeof(fragment));
+	frag->start = start;
+	frag->num_dangling = num_dangling;
+	frag->dangling = dangling;
 
-	return state;
+	return frag;
 }
-
-void connect_single_state(struct state *state, struct state *output)
-{
-	state->output = output;
-	return;
-}
-
-void connect_split_state(struct state *state, struct state *output, struct state *output1)
-{
-	state->output = output;
-	state->output1 = output1;
-	return;
-}
-
-
-	
-
-

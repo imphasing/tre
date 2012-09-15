@@ -1,15 +1,16 @@
-
-struct list {
-	struct node *first;
-};
-
+typedef struct node node;
 struct node {
-	struct state *data;
-	struct node *next;
+	state *data;
+	node *next;
+};
+
+typedef struct list list;
+struct list {
+	 node *first;
 };
 
 
-struct list *create_list();
-void append_node(struct list *list, struct state *data);
-void prepend_node(struct list *list, struct state *data);
-void remove_node(struct list *list, int index);
+list *create_list();
+void append_node(list *list, state *data);
+void prepend_node(list *list, state *data);
+void remove_node(list *list, int index);

@@ -1,5 +1,5 @@
 tre:
-	cc -g -Wall nfa.c list.c tre.c -o tre
+	cc -g -Wall tre.c nfa.c list.c -o tre
 
 all: tre
 

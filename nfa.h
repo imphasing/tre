@@ -1,8 +1,6 @@
-
 enum state_behavior {
 	state_single,
-	state_split,
-	state_match
+	state_split
 };
 
 enum special_chars {
@@ -12,16 +10,25 @@ enum special_chars {
 
 // for single character matches, matching_value will have a character
 // for a split state, or match state, matching_value will be uninitialized
+
+typedef struct state state;
 struct state {
 	enum state_behavior type;
 	char matching_value;
-	struct state *output;
-	struct state *output1;
+
+	state *output;
+	state *output1;
 };
 
-struct state *create_single_state(char matching_value);
-struct state *create_split_state();
-struct state *create_match_state();
+typedef struct fragment fragment;
+struct fragment {
+	state *start;
 
-void connect_single_state(struct state *state, struct state *output);
-void connect_split_state(struct state *state, struct state *output, struct state *output1);
+	int num_dangling;
+	state ***dangling;
+};
+
+
+state *create_single_state(char matching_value);
+state *create_split_state();
+fragment *create_fragment(state *start, int num_dangling, state ***dangling); 

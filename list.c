@@ -1,37 +1,35 @@
 #include <stdlib.h>
-#include "list.h"
 #include "nfa.h"
+#include "list.h"
 
-struct list *create_list()
+list *create_list()
 {
-	struct list *list = malloc(sizeof(struct list));
+	list *list = malloc(sizeof(list));
 	list->first = NULL;
 
 	return list;
 }
 
-void append_node(struct list *list, struct state *data)
+void append_node(list *list, state *data)
 {
-	struct node *node = malloc(sizeof(struct node));
-	node->data = data;
-	node->next = NULL;
-
+	node *to_append = malloc(sizeof(node));
+	to_append->data = data;
+	to_append->next = NULL;
 
 	if (list->first == NULL) {
-		list->first = node;
+		list->first = to_append;
 	} else {
-		struct node *next = list->first;
-		
+		node *next = list->first;
 		while (next->next != NULL)
 			next = next->next;
 	
-		next->next = node;
+		next->next = to_append;
 	}
 }
 
-void prepend_node(struct list *list, struct state *data)
+void prepend_node(list *list, state *data)
 {
-	struct node *node = malloc(sizeof(struct node));
+	node *node = malloc(sizeof(node));
 	node->data = data;
 	node->next = list->first;
 
@@ -39,7 +37,7 @@ void prepend_node(struct list *list, struct state *data)
 }
 	
 
-void remove_node(struct list *list, int index)
+void remove_node(list *list, int index)
 {
 	if (list->first == NULL)
 		return;
@@ -49,8 +47,8 @@ void remove_node(struct list *list, int index)
 		return;
 	}
 
-	struct node *previous = list->first;
-	struct node *next = list->first->next;
+	node *previous = list->first;
+	node *next = list->first->next;
 	int current_index = 1;
 
 	while (next != NULL) {
