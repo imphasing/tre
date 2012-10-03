@@ -15,12 +15,13 @@ int main(int argc, char **argv)
 	char *match = argv[2];	
 	fragment *parsed = parse_regex();
 
-	// add .* to make all expressions match inside strings
 	/*
+	// add .* to make all expressions match inside strings
 	state *star_split = create_split_state();
 	state *star = create_single_state(any_char);
-	connect_split_state(star_split, star, parsed);
-	connect_single_state(star, star_split);
+	star_split->output = star;
+	star_split->output1 = parsed->start;
+	star->output = star_split;
 	*/
 
 	bool matches = nfa_matches(match, parsed->start);
@@ -47,12 +48,7 @@ bool nfa_matches(char *string, state *nfa)
 					if (current->output == NULL)
 						return true;
 
-					if (current->output->type == state_split)
-						// if we get a split state, add it to the current list and process it again
-						append_node(possible, current->output);
-					else
-						// otherwise just add the next state to the next list and continue
-						prepend_node(next_possible, current->output);
+					prepend_node(next_possible, current->output);
 				}
 			} else if (current->type == state_split) {
 				if (current->output == NULL || current->output1 == NULL)
@@ -62,10 +58,10 @@ bool nfa_matches(char *string, state *nfa)
 				append_node(possible, current->output1);
 			}
 				
-			possible = next_possible;
 			next = next->next;
 		}
 
+		possible = next_possible;
 		string++;
 	}
 
@@ -98,6 +94,12 @@ bool more()
 	return current_index < strlen(regex);
 }
 
+void connect_dangling(fragment *frag, fragment *output)
+{
+	int i = 0;
+	for (; i < frag->num_dangling; i++)
+		*(frag->dangling[i]) = output->start;
+}
 
 fragment *parse_base()
 {
@@ -112,6 +114,7 @@ fragment *parse_base()
 			state *single = create_single_state(next());
 			state ***dangling = malloc(1 * sizeof(state **));
 			dangling[0] = &single->output;
+			single->output = NULL;
 
 			return create_fragment(single, 1, dangling);
 		}
@@ -124,45 +127,51 @@ fragment *parse_factor()
 
 	if (more() && peek() == '*') {
 		eat('*');
+
 		state *next = create_split_state();
-		next->output = base;
-
-		// connect dangling states from base to the new state
-		int i = 0;
-		for (; i < base->num_dangling; i++)
-			*(base->dangling[i]) = next;	
-
 		state ***dangling = malloc(1 * sizeof(state **));
 		dangling[0] = &next->output1;
+		next->output = base->start;
+		next->output1 = NULL;
 
-		return create_fragment(next, 1, dangling);
+		fragment *connected = create_fragment(next, 1, dangling);
+		connect_dangling(base, connected);
+
+		return connected;
+
 	} else if (more() && peek() == '+') {
 		eat('+');
+
 		state *next = create_split_state();
-		next->output = base;
-
-		int i = 0;
-		for (; i < base->num_dangling; i++)
-			*(base->dangling[i]) = next;	
-
 		state ***dangling = malloc(1 * sizeof(state **));
 		dangling[0] = &next->output1;
+		next->output = base->start;
+		next->output1 = NULL;
 
-		return create_fragment(base, 1, dangling);
-	}
-	else if (more() && peek() == '?') {
+		fragment *connected = create_fragment(next, 1, dangling);
+		connect_dangling(base, connected);
+
+		base->dangling = connected->dangling;
+		base->num_dangling = connected->num_dangling;
+
+		return base;
+
+	} else if (more() && peek() == '?') {
 		eat('?');
-		state *next = create_split_state();
-		next->output = base;
 
+		state *next = create_split_state();
 		state ***dangling = malloc((1 + base->num_dangling) * sizeof(state **)); 
 		dangling[0] = &next->output1;
+		next->output1 = NULL;
 
+		next->output = base->start;
+		
 		int i = 0;
 		for (; i < base->num_dangling; i++)
 			dangling[1 + i] = base->dangling[i];
 
-		return create_fragment(next, 2 + base->num_dangling, dangling);
+		fragment *connected = create_fragment(next, 1 + base->num_dangling, dangling);
+		return connected;
 	}
 
 	return base;
@@ -176,11 +185,11 @@ fragment *parse_term()
 
 	while (more() && peek() != ')' && peek() != '|') {
 		fragment *after = parse_factor();
+		connect_dangling(next, after);
 
-		int i = 0;
-		for (; i < next->num_dangling; i++)
-			*(next->dangling[i]) = after;
-
+		first->dangling = after->dangling;
+		first->num_dangling = after->num_dangling;
+		
 		next = after;
 	}
 
@@ -196,8 +205,8 @@ fragment *parse_regex()
 		fragment *regex = parse_regex();
 
 		state *split = create_split_state();
-		split->output = term;
-		split->output1 = regex;
+		split->output = term->start;
+		split->output1 = regex->start;
 
 		state ***dangling = malloc((term->num_dangling + regex->num_dangling) * sizeof(state **));
 
