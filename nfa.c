@@ -3,19 +3,19 @@
 
 state *create_single_state(char matching_value)
 {
-	state *state = malloc(sizeof(state));
-	state->type = state_single;
-	state->matching_value = matching_value;
+	state *new_state = malloc(sizeof(state));
+	new_state->type = state_single;
+	new_state->matching_value = matching_value;
 
-	return state;
+	return new_state;
 }
 
 state *create_split_state()
 {
-	state *state = malloc(sizeof(state));
-	state->type = state_split;
+	state *new_state = malloc(sizeof(state));
+	new_state->type = state_split;
 
-	return state;
+	return new_state;
 }
 
 fragment *create_fragment(state *start, int num_dangling, state ***dangling)

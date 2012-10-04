@@ -4,51 +4,51 @@
 
 list *create_list()
 {
-	list *list = malloc(sizeof(list));
-	list->first = NULL;
+	list *new_list = malloc(sizeof(list));
+	new_list->first = NULL;
 
-	return list;
+	return new_list;
 }
 
-void append_node(list *list, state *data)
+void append_node(list *to_append, state *data)
 {
-	node *to_append = malloc(sizeof(node));
-	to_append->data = data;
-	to_append->next = NULL;
+	node *new_node = malloc(sizeof(node));
+	new_node->data = data;
+	new_node->next = NULL;
 
-	if (list->first == NULL) {
-		list->first = to_append;
+	if (to_append->first == NULL) {
+		to_append->first = new_node;
 	} else {
-		node *next = list->first;
+		node *next = to_append->first;
 		while (next->next != NULL)
 			next = next->next;
 	
-		next->next = to_append;
+		next->next = new_node;
 	}
 }
 
-void prepend_node(list *list, state *data)
+void prepend_node(list *to_prepend, state *data)
 {
-	node *node = malloc(sizeof(node));
-	node->data = data;
-	node->next = list->first;
+	node *new_node = malloc(sizeof(node));
+	new_node->data = data;
+	new_node->next = to_prepend->first;
 
-	list->first = node;
+	to_prepend->first = new_node;
 }
 	
 
-void remove_node(list *list, int index)
+void remove_node(list *to_remove, int index)
 {
-	if (list->first == NULL)
+	if (to_remove->first == NULL)
 		return;
 	
 	if (index == 0) {
-		list->first = list->first->next;
+		to_remove->first = to_remove->first->next;
 		return;
 	}
 
-	node *previous = list->first;
-	node *next = list->first->next;
+	node *previous = to_remove->first;
+	node *next = to_remove->first->next;
 	int current_index = 1;
 
 	while (next != NULL) {

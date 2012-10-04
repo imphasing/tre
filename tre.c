@@ -15,19 +15,35 @@ int main(int argc, char **argv)
 	char *match = argv[2];	
 	fragment *parsed = parse_regex();
 
-	/*
-	// add .* to make all expressions match inside strings
+	// add .* to make all expressions match inside strings, since we've basically got an implicit ^ without it
 	state *star_split = create_split_state();
 	state *star = create_single_state(any_char);
 	star_split->output = star;
 	star_split->output1 = parsed->start;
 	star->output = star_split;
-	*/
 
-	bool matches = nfa_matches(match, parsed->start);
+	bool matches = nfa_matches(match, star_split);
 	printf("Result (%s on %s): %d\n", regex, match, matches);
 
 	return 0;
+}
+
+// check the end states to see if we've gotten a match
+bool is_match(list *end_states)
+{
+	node *next = end_states->first;
+	while (next != NULL) {
+		state *check = next->data;
+		if (check == NULL)
+			return true;
+
+		if (check->type == state_split)
+			if (check->output == NULL || check->output1 == NULL)
+				return true;
+		next = next->next;
+	}
+
+	return false;
 }
 
 // wow this actually works
@@ -65,7 +81,7 @@ bool nfa_matches(char *string, state *nfa)
 		string++;
 	}
 
-	return false;
+	return is_match(possible);
 }
 
 
@@ -103,22 +119,33 @@ void connect_dangling(fragment *frag, fragment *output)
 
 fragment *parse_base()
 {
+	char matching_value;
+
 	switch (peek()) {
 		case '(':
 			eat('(');
 			fragment *regex = parse_regex();
 			eat(')');
 			return regex;
+		case '.':
+			matching_value = any_char;
+			next();
+			break;
+		case '\\':
+			eat('\\');
+			matching_value = next();
+			break;
 		default:
-		{
-			state *single = create_single_state(next());
-			state ***dangling = malloc(1 * sizeof(state **));
-			dangling[0] = &single->output;
-			single->output = NULL;
-
-			return create_fragment(single, 1, dangling);
-		}
+			matching_value = next();
+			break;
 	}
+
+	state *single = create_single_state(matching_value);
+	state ***dangling = malloc(1 * sizeof(state **));
+	dangling[0] = &single->output;
+	single->output = NULL;
+
+	return create_fragment(single, 1, dangling);
 }
 
 fragment *parse_factor()
