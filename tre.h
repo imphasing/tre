@@ -2,6 +2,7 @@
 
 int main(int argc, char **argv);
 bool nfa_matches(char *string, state *nfa);
+bool nfa_matches_better(char *string, state *nfa);
 
 char peek();
 bool eat(char c);

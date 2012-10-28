@@ -6,13 +6,15 @@
 #include "list.h"
 #include "tre.h"
 
+#define MAX_STATES 1000000
+
 int current_index = 0;
 char *regex;
 
 int main(int argc, char **argv)
 {
 	regex = argv[1];
-	char *match = argv[2];	
+	char *match = argv[2];
 	fragment *parsed = parse_regex();
 
 	// add .* to make all expressions match inside strings, since we've basically got an implicit ^ without it
@@ -46,6 +48,76 @@ bool is_match(list *end_states)
 	return false;
 }
 
+bool is_match_arr(state **list, int num)
+{
+	int i = 0;
+	for (; i < num; i++) {
+		state *check = list[num];
+
+		if (check == NULL)
+			return true;
+
+		if (check->type == state_split)
+			if (check->output == NULL || check->output1 == NULL)
+				return true;
+	}
+
+	return false;
+}
+
+
+bool nfa_matches_better(char *string, state *nfa)
+{
+	// limited to 100000 states at once by default
+	state **possible = malloc(MAX_STATES * sizeof(state *));
+	int num_possible = 0;
+
+	state **next_possible = malloc(MAX_STATES * sizeof(state *));
+	int num_next = 0;
+
+	possible[0] = nfa;
+	num_possible = 1;
+
+	while (*string != '\0') {
+		int i = 0;
+		for (; i < num_possible; i++) {
+			state *current = possible[i];
+
+			if (current->type == state_single) {
+				if (current->matching_value == *string || current->matching_value == any_char) {
+					if (current->output == NULL)
+						return true;
+
+					next_possible[num_next] = current->output;
+					num_next++;
+				}
+			} else if (current->type == state_split) {
+				if (current->output == NULL || current->output1 == NULL)
+					return true;
+
+				possible[num_possible] = current->output;
+				possible[num_possible + 1] = current->output1;
+				num_possible += 2;
+
+			}
+		}
+
+		// swap new list of next states with old clear the new old
+		state **tmp = possible;
+		possible = next_possible;
+		next_possible = tmp;
+		num_possible = num_next;
+
+		memset(next_possible, 0, sizeof(next_possible));
+		num_next = 0;
+
+		string++;
+	}
+
+	return is_match_arr(possible, num_possible);
+}
+
+
 // wow this actually works
 // doesn't match if there's characters in front of the string to test though, so it's like an implicit ^..
 bool nfa_matches(char *string, state *nfa)
@@ -73,7 +145,7 @@ bool nfa_matches(char *string, state *nfa)
 				append_node(possible, current->output);
 				append_node(possible, current->output1);
 			}
-				
+
 			next = next->next;
 		}
 
@@ -187,12 +259,12 @@ fragment *parse_factor()
 		eat('?');
 
 		state *next = create_split_state();
-		state ***dangling = malloc((1 + base->num_dangling) * sizeof(state **)); 
+		state ***dangling = malloc((1 + base->num_dangling) * sizeof(state **));
 		dangling[0] = &next->output1;
 		next->output1 = NULL;
 
 		next->output = base->start;
-		
+
 		int i = 0;
 		for (; i < base->num_dangling; i++)
 			dangling[1 + i] = base->dangling[i];
@@ -216,7 +288,7 @@ fragment *parse_term()
 
 		first->dangling = after->dangling;
 		first->num_dangling = after->num_dangling;
-		
+
 		next = after;
 	}
 
