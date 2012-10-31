@@ -2,63 +2,32 @@
 #include "nfa.h"
 #include "list.h"
 
-list *create_list()
+state_list *list_create()
 {
-	list *new_list = malloc(sizeof(list));
-	new_list->first = NULL;
+	state_list *new_list = malloc(sizeof(state_list));
+	new_list->capacity = INITIAL_SIZE;
+	new_list->next_index = 0;
+	new_list->list = malloc(sizeof(state *) * INITIAL_SIZE);
 
 	return new_list;
 }
 
-void append_node(list *to_append, state *data)
+void list_append(state_list *to_append, state *data)
 {
-	node *new_node = malloc(sizeof(node));
-	new_node->data = data;
-	new_node->next = NULL;
-
-	if (to_append->first == NULL) {
-		to_append->first = new_node;
-	} else {
-		node *next = to_append->first;
-		while (next->next != NULL)
-			next = next->next;
+	if (to_append->next_index >= to_append->capacity)
+		list_grow(to_append);
 	
-		next->next = new_node;
-	}
+	to_append->list[to_append->next_index] = data;
+	to_append->next_index++;
 }
 
-void prepend_node(list *to_prepend, state *data)
+void list_clear(state_list *to_clear)
 {
-	node *new_node = malloc(sizeof(node));
-	new_node->data = data;
-	new_node->next = to_prepend->first;
-
-	to_prepend->first = new_node;
+	to_clear->next_index = 0;
 }
-	
 
-void remove_node(list *to_remove, int index)
+void list_grow(state_list *to_grow)
 {
-	if (to_remove->first == NULL)
-		return;
-	
-	if (index == 0) {
-		to_remove->first = to_remove->first->next;
-		return;
-	}
-
-	node *previous = to_remove->first;
-	node *next = to_remove->first->next;
-	int current_index = 1;
-
-	while (next != NULL) {
-		if (index == current_index) {
-			previous->next = next->next;
-			return;
-		}
-
-		previous = next;
-		next = next->next;
-		current_index++;
-	}
+	to_grow->list = realloc(to_grow->list, (sizeof(state **) * to_grow->capacity) * 2);
+	to_grow->capacity *= 2;
 }
